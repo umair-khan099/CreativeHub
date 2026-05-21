@@ -10,4 +10,8 @@ export const CONFIG = {
   PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI,
   CORS_ORIGIN: process.env.CORS_ORIGIN,
+  ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
+  ACCESS_TOKEN_EXP: process.env.ACCESS_TOKEN_EXP,
+  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+  REFRESH_TOKEN_EXP: process.env.REFRESH_TOKEN_EXP,
 };

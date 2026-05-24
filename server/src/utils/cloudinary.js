@@ -5,9 +5,9 @@ import { CONFIG } from "../config/dotenv.config.js";
 // ================= CONFIG =================
 
 cloudinary.config({
-  cloud_name: CONFIG.CLOUDINARY_CLOUD_NAME,
-  api_key: CONFIG.CLOUDINARY_API_KEY,
-  api_secret: CONFIG.CLOUDINARY_API_SECRET,
+  cloud_name: CONFIG.COUDINARY_CLOUD_NAME,
+  api_key: CONFIG.COUDINARY_API_KEY,
+  api_secret: CONFIG.COUDINARY_API_SECRET,
 });
 
 // ================= UPLOAD FUNCTION =================

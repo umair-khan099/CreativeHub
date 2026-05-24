@@ -1,7 +1,7 @@
 import mongoose, { Schema, model } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { CONFIG } from "../config/dotenv.config";
+import { CONFIG } from "../config/dotenv.config.js";
 
 const userSchema = new Schema(
   {
@@ -50,11 +50,9 @@ const userSchema = new Schema(
       type: String,
       required: [true, "password feild is required"],
       minlength: 6,
-      select: false,
     },
     refreshToken: {
       type: String,
-      select: false,
     },
   },
   { timestamps: true },

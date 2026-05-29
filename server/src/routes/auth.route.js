@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  generateNewAccessTokenAndRefreshToken,
   getMe,
   loginUser,
   logOut,
@@ -30,3 +31,5 @@ authRouter.post("/login", validate(loginUserSchema), loginUser);
 authRouter.get("/getMe", isAuth, getMe);
 
 authRouter.post("/logout", isAuth, logOut);
+
+authRouter.post("refresh-token" , generateNewAccessTokenAndRefreshToken)

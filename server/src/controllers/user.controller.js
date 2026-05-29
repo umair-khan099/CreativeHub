@@ -3,10 +3,19 @@ import { AppResponse } from "../utils/AppRespose.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { User } from "../models/user.model.js";
+import jwt from "jsonwebtoken";
+import { CONFIG } from "../config/dotenv.config.js";
 
 const options = {
   httpOnly: true,
   secure: true,
+};
+const removePasswordAndRefreshToken = (user) => {
+  const userResponse = user.toObject();
+
+  delete userResponse.password;
+  delete userResponse.refreshToken;
+  return userResponse;
 };
 
 export const registerUser = asyncHandler(async (req, res) => {
@@ -49,11 +58,14 @@ export const registerUser = asyncHandler(async (req, res) => {
     password,
     avatar: avatarUploaded.url,
     coverImage: coverImageUploaded?.url,
-  }).select("-password -refreshToken");
+  });
+
+  res;
+  const userResponse = removePasswordAndRefreshToken(user);
 
   res
     .status(201)
-    .json(new AppResponse(201, user, "User register succsessfully"));
+    .json(new AppResponse(201, userResponse, "User register successfully"));
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
@@ -71,18 +83,13 @@ export const loginUser = asyncHandler(async (req, res) => {
   if (!isPasswordCorrect) {
     throw new AppError(401, "Invalide user credentials");
   }
-  console.log(isPasswordCorrect);
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
 
   user.refreshToken = refreshToken;
   await user.save({ validateBeforeSave: false });
 
-  const userResponse = user.toObject();
-
-  delete userResponse.password;
-  delete userResponse.refreshToken;
-
+  const userResponse = removePasswordAndRefreshToken(user);
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
@@ -94,19 +101,58 @@ export const getMe = asyncHandler(async (req, res) => {
   const user = req.user;
 
   res
-    .status(201)
-    .json(new AppResponse(201, user, "user has fetched data successfully"));
+    .status(200)
+    .json(new AppResponse(200, user, "user has fetched data successfully"));
 });
 
 export const logOut = asyncHandler(async (req, res) => {
   const user = req.user;
 
-  await User.findById(user._id, {
+  await User.findByIdAndUpdate(user._id, {
     refreshToken: null,
   });
   res
-    .status(201)
+    .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
     .json("user loggedOut in successfully");
 });
+
+export const generateNewAccessTokenAndRefreshToken = asyncHandler(
+  async (req, res) => {
+    const { refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+      throw new AppError(401, "UnAuthorized user");
+    }
+
+    const decoded = jwt.verify(refreshToken, CONFIG.REFRESH_TOKEN_SECRET);
+
+    if (!decoded) {
+      throw new AppError(400, "Invalide Refresh Token");
+    }
+    const user = await User.findById(decoded._id).select("+refreshToken");
+
+    if (!user) {
+      throw new AppError(404, "User not found");
+    }
+
+    if (refreshToken !== user?.refreshToken) {
+      throw new AppError(400, "Invalide Refresh Token ");
+    }
+
+    const accessToken = user.generateAccessToken();
+    const newRefreshToken = user.generateRefreshToken();
+
+    user.refreshToken = newRefreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    const userResponse = removePasswordAndRefreshToken(user);
+
+    res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(new AppResponse(200, userResponse, "Access token refreshed"));
+  },
+);

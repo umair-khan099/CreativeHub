@@ -50,9 +50,11 @@ const userSchema = new Schema(
       type: String,
       required: [true, "password feild is required"],
       minlength: 6,
+      select: false,
     },
     refreshToken: {
       type: String,
+      select: false,
     },
   },
   { timestamps: true },

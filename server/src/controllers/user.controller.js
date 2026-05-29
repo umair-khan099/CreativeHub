@@ -1,7 +1,13 @@
 import { AppError } from "../utils/AppError.js";
+import { AppResponse } from "../utils/AppRespose.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { User } from "../models/user.model.js";
+
+const options = {
+  httpOnly: true,
+  secure: true,
+};
 
 export const registerUser = asyncHandler(async (req, res) => {
   //   take data from user
@@ -43,7 +49,64 @@ export const registerUser = asyncHandler(async (req, res) => {
     password,
     avatar: avatarUploaded.url,
     coverImage: coverImageUploaded?.url,
-  });
+  }).select("-password -refreshToken");
 
-    
+  res
+    .status(201)
+    .json(new AppResponse(201, user, "User register succsessfully"));
+});
+
+export const loginUser = asyncHandler(async (req, res) => {
+  const { userName, email, password } = req.body;
+
+  const user = await User.findOne({ $or: [{ userName }, { email }] }).select(
+    "+password ",
+  );
+
+  if (!user) {
+    throw new AppError(404, "user not found , register first");
+  }
+
+  const isPasswordCorrect = await user.isPasswordCorrect(password);
+  if (!isPasswordCorrect) {
+    throw new AppError(401, "Invalide user credentials");
+  }
+  console.log(isPasswordCorrect);
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  const userResponse = user.toObject();
+
+  delete userResponse.password;
+  delete userResponse.refreshToken;
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(new AppResponse(200, userResponse, "user logged in successfully"));
+});
+
+export const getMe = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  res
+    .status(201)
+    .json(new AppResponse(201, user, "user has fetched data successfully"));
+});
+
+export const logOut = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  await User.findById(user._id, {
+    refreshToken: null,
+  });
+  res
+    .status(201)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json("user loggedOut in successfully");
 });
